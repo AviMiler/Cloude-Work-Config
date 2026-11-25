@@ -22,6 +22,9 @@ user/
 | `tfs-access` | עבודה מול שרת ה-TFS (Azure DevOps Server) הפנימי דרך REST מ-PowerShell |
 | `project-map` | יצירת `PROJECT_MAP.md` – מפה קצרה של הפרויקט לסוכן |
 | `microservices-logging-placement` | איפה, באיזו רמה ומה לרשום בלוגים במיקרו-שירותים |
+| `outlook-access` | שליחה, קריאה וחיפוש מיילים דרך Outlook הקלאסי (COM) מ-PowerShell. הסקריפטים מצורפים ב-`scripts/` |
+
+כל הסקילים מוגדרים **לא ליצור קבצים אם אפשר** – להריץ פקודות ישירות. סקריפטים נדרשים מגיעים מוכנים בתיקיית `scripts/` של הסקיל.
 
 ### פרטים למלא במחשב העבודה
 פרטים ספציפיים של הארגון הוחלפו ב-placeholders. יש להחליף אותם אחרי ההעתקה:
@@ -32,6 +35,7 @@ user/
 | `<COLLECTION>` | שם ה-collection (בדרך כלל `DefaultCollection`) | `tfs-access` |
 | `<PROJECT>` | שם הפרויקט ב-TFS | `tfs-access` |
 | `<N>` | גודל השרת (מספר repos / branches / definitions) – אופציונלי | `tfs-access/SKILL.md`, `references/git-and-prs.md` |
+| `<WORK_EMAIL>` | כתובת המייל בעבודה (נמען ברירת מחדל) | `outlook-access/SKILL.md`, `outlook-access/scripts/send-mail.ps1` |
 
 ## התקנה במחשב העבודה
 **Windows (PowerShell):**

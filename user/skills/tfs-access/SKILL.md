@@ -150,6 +150,7 @@ Never conclude "no access" from a 400 or 404.
 7. Output hygiene: no usernames, server names, emails or secret values in output. Select only the fields needed.
 8. Never try to extract secret values (variable group secrets, service endpoint credentials). Never bypass a 403.
 9. If something is ambiguous, ask the user. Do not guess IDs, states, field names or branches.
+10. Do not create files if possible: run the PowerShell commands directly (define `Invoke-Tfs` in the session, do not save it as a .ps1). No temporary scripts, JSON bodies or scratch files. Write a file only when the user asked for one (export, download), in the location the user approved.
 
 ## 6. Index: which file to read
 | Task | Read |

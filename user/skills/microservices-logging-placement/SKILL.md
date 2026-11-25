@@ -84,3 +84,6 @@ Handle with care (pseudonymize or minimize): file paths, internal hostnames and 
 - Would someone act on this during an incident or investigation? If not, demote to Debug or remove.
 - Is the same event already logged in another layer? If so, remove it.
 - Does it contain anything from the exclusion list or raw untrusted input? If so, mask, truncate, or remove.
+
+## Files rule
+If possible, do not create new files: add log statements inside the existing code files and use the existing logger. Do not create helper or wrapper files for logging unless there is no other way.
