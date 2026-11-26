@@ -137,7 +137,7 @@ Never conclude "no access" from a 400 or 404.
 | Release definitions, releases, approvals, deploy, deployments | `references/releases.md` |
 | Variable groups, task groups, service endpoints, agent pools | `references/library-pools.md` |
 | Test plans, feeds/packages, wiki | `references/tests-feeds-wiki.md` |
-| Ready-made multi-step workflows | `references/recipes.md` |
+| Ready-made multi-step workflows (including my items -> email, recipes.md 13) | `references/recipes.md` |
 | First-time probes: version, permissions, process template | `references/discovery.md` |
 | PowerShell pitfalls, paging, encoding, output | `references/powershell-notes.md` |
 | Any error, unexpected result | `references/troubleshooting.md` |
@@ -145,5 +145,6 @@ Never conclude "no access" from a 400 or 404.
 
 ## 7. Working style
 - Discover before acting: list names, types, IDs and states first.
+- Combined jobs (for example TFS then mail) go in ONE command block, never one tool call per step. Example: `references/recipes.md` section 13.
 - Keep output short: `Select-Object` only needed fields, `-First N`, `$top`.
 - Report what you did, the result, and what you did not verify.

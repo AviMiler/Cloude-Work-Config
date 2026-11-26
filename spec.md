@@ -11,7 +11,7 @@ Requirements of this repo (Claude Code config for the work computer). Sections 1
 - SR6: No secrets in files committed to git or in output.
 - SR7: Work on `main` only (git-instructions.md); every change goes through the coding workflow.
 - SR8: The work machine is one-way: nothing can be copied out. Output the user must relay is kept short (the user retypes it in words).
-- SR9: Work-side Claude Code runs commands through Git Bash; PowerShell is started only with `-EncodedCommand` from a quoted heredoc and `-OutputFormat Text`, never via a temp .ps1 or `$HOME`.
+- SR9: Work-side Claude Code runs commands through Git Bash; PowerShell is started only with `-EncodedCommand` from a quoted heredoc and `-OutputFormat Text`, never via a temp .ps1 or `$HOME`. `-ExecutionPolicy Bypass` on that command line is allowed (per process only; the policy itself is never changed, TFS11). A multi-line or generated mail body is sent by calling outlook-access `send-mail.ps1` in-process (`&`, `-Body $body`) inside the same EncodedCommand block, never via a temp file or a multi-line bash-quoted `-File` argument (example: tfs-access `references/recipes.md` recipe 13).
 - SR10: Files read by PowerShell 5.1 are ASCII-only or UTF-8 with BOM.
 
 ## 2. tfs-access (TFS)

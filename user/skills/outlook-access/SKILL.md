@@ -31,6 +31,7 @@ Works through the classic Outlook installed on this machine, using the user's si
 3. Pass subject, body and keywords directly as command parameters. Do not create temporary files. If Hebrew shows as ???, report the exact problem and stop
 4. Do not create files. Run the two ready-made scripts in `scripts/` (next to this SKILL.md) directly. Never write, rewrite or recreate them, and never write a temporary .ps1/.txt to run a command
 5. `<SCRIPTS_DIR>` below = the `scripts` folder next to this SKILL.md, normally `C:\Users\<user>\.claude\skills\outlook-access\scripts`. Use the full absolute path in the command
+6. A long, multi-line or generated body (for example built from another skill's output) is sent by calling `send-mail.ps1` in-process with `&` inside the same PowerShell block, with `-Body $body`. Never via a temp file, and never by squeezing a multi-line body into a bash-quoted `-File` argument. Example: tfs-access `references/recipes.md` section 13
 
 =====================================================
 PART 1: SENDING MAIL

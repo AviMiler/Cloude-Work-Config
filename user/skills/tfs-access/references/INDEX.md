@@ -40,6 +40,7 @@ Start with `../SKILL.md` (environment, the Tfs module and its ready-made functio
 | Daily summary | `Get-TfsDailySummary` | recipes.md 2 |
 | Bulk update | recipes.md | 9 |
 | Export to CSV | recipes.md | 10 |
+| Email my open items | recipes.md | 13 |
 | An error happened | troubleshooting.md | 1, 2 |
 | Which endpoint and version works on THIS server | verified.md | all |
 | PowerShell quoting, JSON, paging | powershell-notes.md | all |
@@ -52,7 +53,7 @@ Start with `../SKILL.md` (environment, the Tfs module and its ready-made functio
 - `releases.md`: 1 Concepts, 2 Definitions, 3 Releases, 4 Deployments, 5 Approvals, 6 Create release, 7 Deploy, 8 Abandon/cancel, 9 Logs, 10 Pitfalls
 - `library-pools.md`: 1 Variable groups, 2 Task groups, 3 Service endpoints, 4 Secure files, 5 Agent pools, 6 Deployment groups/environments, 7 Pitfalls
 - `tests-feeds-wiki.md`: 1 Test plans, 2 Runs/results, 3 Feeds, 4 npm/NuGet usage, 5 Wiki, 6 Pitfalls
-- `recipes.md`: 1-12 workflows
+- `recipes.md`: 1-13 workflows
 - `discovery.md`: 1 Connectivity, 2 Server version, 3 Per-area versions, 4 Permission probe, 5 Process template, 6 Known facts
 - `powershell-notes.md`: 1 Versions, 2 Escaping, 3 JSON, 4 Error bodies, 5 Paging, 6 Headers/binary, 7 Dates/encoding, 8 Output/performance
 - `verified.md`: endpoints that worked (with versions) and endpoints that failed on this server

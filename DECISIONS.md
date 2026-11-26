@@ -2,6 +2,14 @@
 
 Short records of design decisions that are not obvious from the code. Newest first.
 
+## 2026-11-26: generated mail bodies: in-process send-mail.ps1 call
+
+**Decision:** a long, multi-line or generated mail body is sent by calling `send-mail.ps1` with `&` and `-Body $body` inside the same `-EncodedCommand` block that builds it (tfs-access recipe 13 does this for "my open items -> email"). The command line carries `-ExecutionPolicy Bypass` (per process).
+
+**Alternatives considered:** a temp .txt or .ps1 for the body (breaks SR5/SR9); a multi-line body inside a bash-quoted `-File` argument (the field run failed on quoting and Hebrew); a new wrapper script in `scripts/` (one more file for no gain over the existing script).
+
+**Why:** a field run of "find my TFS tasks and email them" took very many tool calls. One block does query, grouping, body and send, with no temp files and no per-step calls. Cost: `send-mail.ps1` reports failure through `exit 1` and `Write-Error`, so the recipe resets and checks `$LASTEXITCODE`.
+
 ## 2026-11-26: build-check hook: Stop event, bash, CRLF-proof command
 
 **Decision:** `check-build.sh` is a bash hook on the Stop event. It parses stdin with grep/sed, runs only tools already in the project (`dotnet build --no-restore`, local `node_modules/.bin/tsc` and `eslint`), and is started by `bash -c 'bash <(sed "s/\r$//" ~/.claude/hooks/check-build.sh)'` with timeout 300.
