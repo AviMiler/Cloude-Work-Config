@@ -1,6 +1,6 @@
 # Pipelines: Releases
 
-Prerequisite: `Invoke-Tfs`, `$Base`, `$Proj` from SKILL.md. API version `6.0` (exceptions noted).
+Prerequisite: import the module (SKILL.md section 2). API version `6.0` (exceptions noted).
 On this server the Release API is on the same host: `$Proj/_apis/release/...`.
 
 ## Contents
@@ -52,6 +52,7 @@ $rel.artifacts | Select-Object alias, @{n='version';e={$_.definitionReference.ve
 - Release environment `id` here is what the deploy call needs.
 
 ## 4. What is deployed where
+One call: `Get-TfsDeployed -Definition <name text or wildcard> [-Environment 'Prod*'] [-MaxDefinitions N]`. Per environment of the matching definitions (default 3, cap 10) it returns the latest succeeded deployment: Release, ArtifactVersion, Completed (`none` or `error: HTTP n` when there is nothing or the call failed). The ArtifactVersion shape is not verified on this server. Raw form:
 ```powershell
 (Invoke-Tfs "$Proj/_apis/release/deployments?definitionId=<defId>&definitionEnvironmentId=<envDefId>&deploymentStatus=succeeded&operationStatus=Approved&`$top=5").value |
   Select-Object @{n='release';e={$_.release.name}}, @{n='env';e={$_.releaseEnvironment.name}}, deploymentStatus, completedOn
@@ -61,7 +62,7 @@ $rel.artifacts | Select-Object alias, @{n='version';e={$_.definitionReference.ve
 - Also lets you answer "when was production last updated".
 
 ## 5. Approvals
-List pending (READ):
+Pending approvals also appear in `Get-TfsDailySummary` (Id, Release, Environment, Type; no approver names). List pending (READ) raw:
 ```powershell
 (Invoke-Tfs "$Proj/_apis/release/approvals?statusFilter=pending&`$top=50").value |
   Select-Object id, approvalType, @{n='release';e={$_.release.name}}, @{n='env';e={$_.releaseEnvironment.name}}, @{n='approver';e={$_.approver.displayName}}

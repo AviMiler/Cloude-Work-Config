@@ -1,6 +1,6 @@
 # Pipelines: Builds
 
-Prerequisite: `Invoke-Tfs`, `$Base`, `$Proj` from SKILL.md. API version `6.0`.
+Prerequisite: import the module (SKILL.md section 2). API version `6.0`.
 
 ## Contents
 1. Concepts
@@ -62,6 +62,10 @@ Invoke-Tfs "$Proj/_apis/build/builds/$id"
 - Duration: `([datetime]$b.finishTime - [datetime]$b.startTime)`.
 
 ## 5. Why did a build fail
+One call: `Get-TfsBuildFailure -Id <buildId> [-TailLines N]`. It returns the build facts (BuildNumber, Definition, Status, Result, Branch, Sha), `FailedSteps` (tasks first; step, type, result, error issues, secrets masked), `LogStep` (first failed task with a log) and `LogTail` (last N log lines, default 40, cap 200, secrets and server name masked). Report: failing step, error message, branch and commit, and your hypothesis labeled as a hypothesis.
+
+The manual steps (for details the function does not give):
+
 Step 1: the timeline lists stages, jobs and tasks with their results.
 ```powershell
 $tl = Invoke-Tfs "$Proj/_apis/build/builds/$id/timeline"
@@ -73,7 +77,7 @@ $tl.records | Where-Object { $_.issues } | ForEach-Object { $_.name; $_.issues |
 ```
 Step 3: read the log of the failing task.
 ```powershell
-Invoke-Tfs "$Proj/_apis/build/builds/$id/logs/<logId>"      # returns the log text
+Invoke-Tfs "$Proj/_apis/build/builds/$id/logs/<logId>" -Raw   # the log text (-Raw is required: it is not JSON)
 ```
 - Logs are large. Show only the last 40 lines before the error: split by newline and take the tail.
 - Always report: failing step name, error message, the commit/branch of the build, and your hypothesis labeled as a hypothesis.

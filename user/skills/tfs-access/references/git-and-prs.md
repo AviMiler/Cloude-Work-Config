@@ -1,6 +1,6 @@
 # Repos (Git), Pull Requests, commit linking
 
-Prerequisite: `Invoke-Tfs`, `$Base`, `$Proj` from SKILL.md. API version `6.0`.
+Prerequisite: import the module (SKILL.md section 2). API version `6.0`.
 `<repo>` = repository name or id. Branch names in URLs are WITHOUT `refs/heads/`; in ref fields they are WITH it.
 
 ## Contents
@@ -17,6 +17,7 @@ Prerequisite: `Invoke-Tfs`, `$Base`, `$Proj` from SKILL.md. API version `6.0`.
 11. Pitfalls
 
 ## 1. Repositories
+Find repos by name: `Find-TfsRepo -Name '*billing*' [-Top N]` (Name, Id, DefaultBranch; wildcard filter runs client-side, sorted, first N). Raw REST for the rest:
 ```powershell
 $repos = (Invoke-Tfs "$Proj/_apis/git/repositories").value
 $repos | Select-Object name, id, defaultBranch, size
@@ -42,6 +43,7 @@ Invoke-Tfs "$Proj/_apis/git/repositories/<repo>/refs" -Method POST -Body $new
 - Prefer the local `git` command for normal branch work (`git checkout -b`, `git push`).
 
 ## 3. Commits
+Recent commits: `Get-TfsCommits -Repo <repo> [-Branch <branch>] [-Top N]` (8-char sha, first comment line, date; default branch when `-Branch` is omitted). The filter list below and everything else stay raw:
 ```powershell
 $c = (Invoke-Tfs "$Proj/_apis/git/repositories/<repo>/commits?searchCriteria.itemVersion.version=<branch>&searchCriteria.`$top=20").value
 $c | Select-Object @{n='sha';e={$_.commitId.Substring(0,8)}}, comment, @{n='date';e={$_.author.date}}
@@ -59,7 +61,7 @@ Invoke-Tfs "$Proj/_apis/git/repositories/<repo>/commits/<sha>"                 #
 # list a folder
 (Invoke-Tfs "$Proj/_apis/git/repositories/<repo>/items?scopePath=/src&recursionLevel=OneLevel&versionDescriptor.version=<branch>").value | Select-Object path, isFolder
 # read a file as text
-Invoke-Tfs "$Proj/_apis/git/repositories/<repo>/items?path=/src/file.cs&versionDescriptor.version=<branch>&includeContent=true&`$format=text"
+Invoke-Tfs "$Proj/_apis/git/repositories/<repo>/items?path=/src/file.cs&versionDescriptor.version=<branch>&includeContent=true&`$format=text" -Raw
 ```
 - `recursionLevel`: `None`, `OneLevel`, `Full` (Full on large repos is slow; avoid).
 - Version types: add `&versionDescriptor.versionType=branch|tag|commit`.
@@ -79,9 +81,10 @@ Invoke-Tfs "$Proj/_apis/git/repositories/<repo>/diffs/commits?baseVersion=<branc
 ```
 - Normal workflow uses local `git`: `git status`, `git add`, `git commit -m "message #1234"`, `git push`.
 - Never use `--force` or `git reset --hard` unless the user explicitly asks.
-- Remote URL format: `https://<TFS_HOST>/tfs/<COLLECTION>/<PROJECT>/_git/<repo>`.
+- Remote URL format: `$Base/$Proj/_git/<repo>` (print it only if the user asks; it contains the server name).
 
 ## 7. Pull requests: read
+Lists: `Get-TfsPR [-Repo <repo>] [-Status active|completed|abandoned|all] [-TargetBranch <branch>] [-Top N]` (`-Active` is a shortcut for `-Status active`); project-wide when `-Repo` is omitted. Output: Id, Title, Repo, Source, Target, Status, IsDraft, Created, MergeStatus (no creator). Details, threads and iterations stay raw:
 ```powershell
 $p = "$Proj/_apis/git/repositories/<repo>/pullrequests"
 (Invoke-Tfs "${p}?searchCriteria.status=active").value | Select-Object pullRequestId, title, sourceRefName, targetRefName

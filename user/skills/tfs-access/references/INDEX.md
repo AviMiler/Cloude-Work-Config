@@ -1,33 +1,34 @@
 # Index: complete TFS guide
 
-Start with `../SKILL.md` (environment, helper function, API versions, safety rules). This file is the master index.
+Start with `../SKILL.md` (environment, the Tfs module and its ready-made functions, API versions, safety rules). This file is the master index.
 
 ## A. Which file for which task
 | I want to... | File | Section |
 |---|---|---|
-| Check the connection / who am I | recipes.md | 1 |
+| Check the connection / config (first run) | `Test-TfsSetup` (recipes.md 1) | SKILL.md 2 |
 | Learn what this server supports | discovery.md | 2, 3 |
-| Query my open tasks | boards.md | 3 |
-| Read one work item with links | boards.md | 4 |
-| Create a task / story / bug | boards.md | 5 |
+| Query my open tasks | `Get-TfsMyItems` | boards.md 3 |
+| Read one work item with links | `Get-TfsItem -Id N -Links` | boards.md 4 |
+| See all children below an item / counts by state | `Get-TfsTree -Id N [-Summary]` | boards.md 3 |
+| Create a task / story / bug | `New-TfsItem` (dry run, `-Commit`) | boards.md 5 |
 | Turn a specification into work items | boards.md | 13 (and recipes.md 3) |
-| Change state, assignee, title | boards.md | 6 |
+| Change state, assignee, title, tags | `Set-TfsItem` (dry run, `-Commit`) | boards.md 6 |
 | Link items (parent, related) | boards.md | 7 |
 | Add a comment | boards.md | 8 |
 | Attach a file | boards.md | 9 |
 | Sprints, backlog, taskboard | boards.md | 11 |
 | Saved queries | boards.md | 12 |
-| List repos and branches | git-and-prs.md | 1, 2 |
-| See commits, diffs, files | git-and-prs.md | 3, 4, 5 |
+| List repos / branches | `Find-TfsRepo` / git-and-prs.md | 1 / 2 |
+| See commits / diffs, files | `Get-TfsCommits` / git-and-prs.md | 3 / 4, 5 |
 | Create a branch | git-and-prs.md | 2 |
-| List / read pull requests | git-and-prs.md | 7 |
+| List / read pull requests | `Get-TfsPR` / git-and-prs.md | 7 |
 | Create / review / complete a PR | git-and-prs.md | 8 |
 | Link a commit to a work item | git-and-prs.md | 9 (and recipes.md 4) |
 | List build definitions / builds | builds.md | 2, 3 |
-| Why did a build fail | builds.md | 5 (and recipes.md 5) |
+| Why did a build fail | `Get-TfsBuildFailure -Id N` | builds.md 5 (and recipes.md 5) |
 | Queue / cancel a build | builds.md | 6, 7 |
 | List releases and their stages | releases.md | 3 |
-| What is deployed where | releases.md | 4 (and recipes.md 6) |
+| What is deployed where | `Get-TfsDeployed -Definition X` | releases.md 4 (and recipes.md 6) |
 | Pending approvals / approve | releases.md | 5 |
 | Create a release | releases.md | 6 |
 | Deploy an environment | releases.md | 7 |
@@ -36,7 +37,7 @@ Start with `../SKILL.md` (environment, helper function, API versions, safety rul
 | Test plans, runs, results | tests-feeds-wiki.md | 1, 2 |
 | Feeds and packages | tests-feeds-wiki.md | 3, 4 |
 | Wiki | tests-feeds-wiki.md | 5 |
-| Daily summary | recipes.md | 2 |
+| Daily summary | `Get-TfsDailySummary` | recipes.md 2 |
 | Bulk update | recipes.md | 9 |
 | Export to CSV | recipes.md | 10 |
 | An error happened | troubleshooting.md | 1, 2 |
@@ -44,7 +45,7 @@ Start with `../SKILL.md` (environment, helper function, API versions, safety rul
 | PowerShell quoting, JSON, paging | powershell-notes.md | all |
 
 ## B. Table of contents by file
-- `../SKILL.md`: 1 Environment, 2 Helper function, 3 API versions, 4 URL patterns, 5 Safety protocol, 6 Index, 7 Working style
+- `../SKILL.md`: 1 Environment, 2 The Tfs module (functions and raw-snippet rules), 3 API versions, 4 URL patterns, 5 Safety protocol, 6 Index, 7 Working style
 - `boards.md`: 1 Concepts, 2 Discovery, 3 WIQL, 4 Reading, 5 Creating, 6 Updating, 7 Links, 8 Comments, 9 Attachments, 10 Deleting, 11 Teams/sprints, 12 Saved queries, 13 Spec to items, 14 Pitfalls
 - `git-and-prs.md`: 1 Repositories, 2 Branches/tags, 3 Commits, 4 Files, 5 Diffs, 6 Pushes/local git, 7 PRs read, 8 PRs write, 9 Linking to work items, 10 Policies, 11 Pitfalls
 - `builds.md`: 1 Concepts, 2 Definitions, 3 Listing, 4 One build, 5 Failure investigation, 6 Queue, 7 Cancel/retain, 8 Latest build, 9 Pitfalls
@@ -58,7 +59,7 @@ Start with `../SKILL.md` (environment, helper function, API versions, safety rul
 - `troubleshooting.md`: 1 By status, 2 By symptom, 3 Per area, 4 Reporting, 5 What not to do
 
 ## C. Endpoint cheat sheet
-Base: `https://<TFS_HOST>/tfs/<COLLECTION>`. `P` = project `<PROJECT>`. Versions per SKILL.md section 3.
+Base: `$Base`. `P` = `$Proj` (both set by importing the module from `scripts/tfs-config.psd1`). Versions per SKILL.md section 3.
 | Area | Method | Path |
 |---|---|---|
 | Projects | GET | `_apis/projects` |
@@ -103,8 +104,8 @@ Base: `https://<TFS_HOST>/tfs/<COLLECTION>`. `P` = project `<PROJECT>`. Versions
 | Wiki | GET | `P/_apis/wiki/wikis` |
 
 ## D. Glossary
-- Collection: the top-level container on the server (`<COLLECTION>`).
-- Project: `<PROJECT>`. Team: a group inside a project with its own backlog and sprints.
+- Collection: the top-level container on the server (`$Base` points at it).
+- Project: the work container (`$Proj`). Team: a group inside a project with its own backlog and sprints.
 - Work item: a task/story/bug/etc. Relation: a link between items or to commits/PRs.
 - WIQL: Work Item Query Language (SQL-like).
 - Build definition / build: pipeline / one run of it.

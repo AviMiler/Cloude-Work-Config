@@ -1,6 +1,6 @@
 # Recipes: ready-made multi-step workflows
 
-Prerequisite: `Invoke-Tfs`, `$Base`, `$Proj` from SKILL.md. Each recipe says which reference file holds the details.
+Prerequisite: import the module (SKILL.md section 2). Each recipe says which reference file holds the details.
 All recipes are READ ONLY unless marked (WRITE). Every WRITE step needs the user's explicit approval first.
 
 ## Contents
@@ -19,48 +19,41 @@ All recipes are READ ONLY unless marked (WRITE). Every WRITE step needs the user
 
 ## 1. Connectivity and identity check
 ```powershell
-$ok = Invoke-Tfs "_apis/projects?`$top=1"
-"Projects reachable: " + ($ok.count -ge 1)
-$me = Invoke-Tfs "_apis/connectionData" -Ver "6.0-preview.1"
-"Authenticated: " + [bool]$me.authenticatedUser
+Import-Module "$env:USERPROFILE\.claude\skills\tfs-access\scripts\Tfs.psm1" -Force
+Test-TfsSetup
 ```
-- Report only true/false. Do not print the user's name, id or the server details.
+- It prints only Area, Result (PASS/FAIL/SKIP) and Code (HTTP status, CONFIG, NETWORK, PARSE). Report those rows as they are. Do not print the user's name, id or the server details.
 
 ## 2. Daily summary
-Goal: one short report with three parts.
-1. My open work items (boards.md section 3):
-   - WIQL: assigned to `@Me`, state not in the closed states. Fetch id, title, state, type for up to 30.
-2. Failed builds in the last 24 hours (builds.md section 3):
-   - `resultFilter=failed&statusFilter=completed&minTime=<now - 1 day, ISO>&$top=20`. Show definition, branch, finish time.
-3. Pending approvals (releases.md section 5): list release, environment, type.
-Output format: three short lists. Counts first. Omit empty sections ("none").
-- Do not include personal names beyond what the user needs.
+One call: `Get-TfsDailySummary [-Top N] [-Hours N]`.
+- Counts come first, then three sections: my open work items, builds that failed in the last 24 hours (default), pending release approvals. Each section is a list of rows, `none`, or `error: HTTP n`; one failing section does not affect the others.
+- Report counts first, omit empty sections ("none"). Do not include personal names beyond what the user needs.
+- Approvals are not filtered to the current user (not verified on the real server): say so if the list looks long.
 
 ## 3. Specification to work items (WRITE)
 Full method: boards.md section 13. Summary of the order of operations:
-1. Read the spec. 2. Discover types/states/fields/area/iteration. 3. Present the proposed tree and wait for approval. 4. `validateOnly=true` for one item per type. 5. Create parents first, store ids in `$map`. 6. Create children with parent links. 7. Verify and print a table.
+1. Read the spec. 2. Discover types/states/fields/area/iteration. 3. Present the proposed tree and wait for approval. 4. `New-TfsItem` dry run (no `-Commit`) for one item per type. 5. `New-TfsItem -Commit` for parents first, store ids in `$map`. 6. `New-TfsItem -ParentId ... -Commit` for children. 7. Verify and print a table.
 - Create ONE item, show it, ask "continue with the rest?" before the batch.
 - On any error: stop, list what exists, ask. Never retry blindly (duplicates).
 
 ## 4. Commit with the right work item
-1. Find candidates: WIQL assigned to `@Me`, active states (boards.md section 3).
+1. Find candidates: `Get-TfsMyItems` (boards.md section 3).
 2. Match by the current branch name or the user's wording. If no unique match, list the candidates and ask the user.
 3. Commit locally: `git commit -m "<message> #<id>"`.
-4. After push, verify the link: `Invoke-Tfs "_apis/wit/workitems/${id}?`$expand=relations"` (braces are required) and look for an `ArtifactLink` of the commit.
+4. After push, verify the link: `Get-TfsItem -Id <id> -Links` and look for a relation with Target `Git/Commit` (raw form: `Invoke-Tfs "_apis/wit/workitems/${id}?`$expand=relations"`, braces are required).
 - If the commit is already pushed: link it afterwards (git-and-prs.md section 9B).
 
 ## 5. Investigate a failed build
-1. Get the build (builds.md section 4): result, branch, commit sha, definition.
-2. Timeline: failed records and their `issues` (builds.md section 5).
-3. Log of the failing task: show only the tail lines around the error.
+1. `Get-TfsBuildFailure -Id <buildId>`: result, branch, commit sha, definition, failed steps with their error issues, and the masked log tail (builds.md section 5). Show only the relevant lines.
+2. (Included in step 1.)
+3. (Included in step 1.)
 4. Changes in the build (`/changes`) to see who/what changed (print commit messages, not personal data).
 5. Compare with the last succeeded build of the same definition and branch (builds.md section 8).
 Report: failing step, error message, probable cause (labeled as hypothesis), suggested next step.
 
 ## 6. What version is deployed where
-1. Release definitions: find the definition id and its environments (releases.md section 2).
-2. For each environment: deployments with `deploymentStatus=succeeded&$top=1` (releases.md section 4).
-3. Table: environment, release name, artifact version, completed time.
+1. `Get-TfsDeployed -Definition <name text> [-Environment 'Prod*']` (releases.md section 4).
+2. Table (already the output): definition, environment, release name, artifact version, completed time.
 - Use this to answer "is the fix in production".
 
 ## 7. Pull request with linked work items (WRITE)
@@ -79,7 +72,7 @@ Report: failing step, error message, probable cause (labeled as hypothesis), sug
 ## 9. Bulk update work items (WRITE)
 1. Build the id list with WIQL. Show count and the first 10 titles.
 2. Show the exact change (field, old to new).
-3. Dry run on ONE item with `validateOnly=true`. Show the result.
+3. Dry run `Set-TfsItem` (no `-Commit`) on ONE item. Show the result.
 4. After approval, apply to the rest in a loop with a short pause (`Start-Sleep -Milliseconds 300`). Collect `id, ok/failed, error` per item.
 5. Print the summary table. Never exceed the approved list.
 

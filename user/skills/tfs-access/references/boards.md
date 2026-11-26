@@ -1,6 +1,6 @@
 # Boards: work items, queries, backlogs, sprints
 
-Prerequisite: the helper `Invoke-Tfs` and `$Base`, `$Proj` from SKILL.md. API version `6.0` unless stated.
+Prerequisite: import the module (SKILL.md section 2). API version `6.0` unless stated.
 
 ## Contents
 1. Concepts and process templates
@@ -36,7 +36,7 @@ Prerequisite: the helper `Invoke-Tfs` and `$Base`, `$Proj` from SKILL.md. API ve
 
 ## 2. Discovery
 ```powershell
-# types (large response, about 700 KB; the helper converts it. Always select only the names)
+# types (large response, about 700 KB; `Invoke-Tfs` converts it. Always select only the names)
 (Invoke-Tfs "$Proj/_apis/wit/workitemtypes").value | Select-Object name
 # if that returns nothing, read the categories instead: (Invoke-Tfs "$Proj/_apis/wit/workitemtypecategories").value | Select-Object name
 
@@ -59,6 +59,8 @@ Invoke-Tfs "$Proj/_apis/wit/classificationnodes?`$depth=4"
 - Field `type` tells the value format: string, integer, double, dateTime, html, identity, treePath.
 
 ## 3. Querying with WIQL
+My open items (assigned to me, not closed): `Get-TfsMyItems [-Top N]` returns Id, Type, State, Title. Everything below is for any OTHER query.
+
 Two steps: (1) WIQL returns IDs only, (2) fetch the details in batches.
 ```powershell
 $q = @{ query = "SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = @project AND [System.AssignedTo] = @Me AND [System.State] NOT IN ('Closed','Done','Removed') ORDER BY [System.ChangedDate] DESC" }
@@ -82,13 +84,17 @@ WIQL syntax:
   - Changed in the last week: `... AND [System.ChangedDate] >= @Today - 7`
   - By title: `... AND [System.Title] CONTAINS 'login'`
   - By tag: `... AND [System.Tags] CONTAINS 'urgent'`
-  - In a sprint: `... AND [System.IterationPath] UNDER '<PROJECT>\Sprint 12'`
-  - In an area: `... AND [System.AreaPath] UNDER '<PROJECT>\TeamA'`
-- Hierarchy query (tree): `SELECT [System.Id] FROM WorkItemLinks WHERE ([Source].[System.Id] = 1234) AND ([System.Links.LinkType] = 'System.LinkTypes.Hierarchy-Forward') MODE (Recursive)`. The result is in `.workItemRelations` (source/target pairs), not `.workItems`.
+  - In a sprint: `... AND [System.IterationPath] UNDER '$Proj\Sprint 12'` (inside a double-quoted PowerShell string `$Proj` is expanded)
+  - In an area: `... AND [System.AreaPath] UNDER '$Proj\TeamA'`
+- Hierarchy query (tree): use `Get-TfsTree -Id N [-Depth N] [-Top N] [-Summary]` (Id, ParentId, Level, Type, State, Title; `-Summary` = counts by state). Raw form: `SELECT [System.Id] FROM WorkItemLinks WHERE ([Source].[System.Id] = 1234) AND ([System.Links.LinkType] = 'System.LinkTypes.Hierarchy-Forward') MODE (Recursive)`.
+  - A link query MUST select `FROM WorkItemLinks` and end with `MODE (Recursive)` (or another MODE); a `FROM WorkItems` query cannot filter by links.
+  - The id is an integer literal (`= 1234`), never a string such as `'$Proj\1234'`.
+  - The result is in `.workItemRelations` (source/target pairs; the first entry has no source and is the root), not `.workItems`. Fetch the fields of the target ids with the batch call.
 - Limits: a query returning more than 20,000 items fails (400). Narrow it.
 - Text in WIQL strings: escape a single quote by doubling it (`''`).
 
 ## 4. Reading work items
+One item: `Get-TfsItem -Id N` (Id, Type, State, Title, AreaPath, IterationPath, Tags, Changed, Rev; `-Fields 'System.AssignedTo'` adds fields). With links: `Get-TfsItem -Id N -Links` adds `Relations` (Rel, TargetId, Target, Name; parent = `System.LinkTypes.Hierarchy-Reverse`). Raw REST for everything else:
 ```powershell
 Invoke-Tfs "_apis/wit/workitems/1234"                          # fields only
 Invoke-Tfs "_apis/wit/workitems/1234?`$expand=relations"       # plus links
@@ -103,43 +109,34 @@ Invoke-Tfs "_apis/wit/workitems/1234?`$expand=all"
 - Relations: `$wi.relations | Select-Object rel, url` (the work item ID is the last segment of `url`).
 
 ## 5. Creating work items
-Content type MUST be `application/json-patch+json`. The type goes in the URL after a `$`.
+Use `New-TfsItem`. It is a dry run by default (always sends `validateOnly=true`, saves nothing); the real create needs `-Commit`.
 ```powershell
-$ops = @(
-  @{ op="add"; path="/fields/System.Title"; value="Task title" },
-  @{ op="add"; path="/fields/System.Description"; value="<p>Description</p><ul><li>point</li></ul>" },
-  @{ op="add"; path="/fields/System.AreaPath"; value="<PROJECT>" },
-  @{ op="add"; path="/fields/System.IterationPath"; value="<PROJECT>" },
-  @{ op="add"; path="/fields/Microsoft.VSTS.Common.Priority"; value=2 }
-)
-# dry run: validates, saves nothing
-Invoke-Tfs "$Proj/_apis/wit/workitems/`$Task?validateOnly=true" -Method POST -Body $ops -ContentType "application/json-patch+json"
-# real create (only after approval)
-Invoke-Tfs "$Proj/_apis/wit/workitems/`$Task" -Method POST -Body $ops -ContentType "application/json-patch+json"
+# dry run: shows the planned fields; nothing is saved
+New-TfsItem -Type Task -Title "Task title" -ParentId 1234 -Fields @{ 'Microsoft.VSTS.Common.Priority' = 2; 'System.Description' = '<p>Description</p>' }
+# real create (only after approval): validates again, creates, re-reads and returns the stored values
+New-TfsItem -Type Task -Title "Task title" -ParentId 1234 -Fields @{ 'Microsoft.VSTS.Common.Priority' = 2 } -Commit
 ```
-- `validateOnly=true` runs all rules and returns what would be created, with NO save. Always dry-run first.
-- With a parent link in the same call (section 7): add the relation op to `$ops`.
+- The type is any type that exists (section 2); a type with a space (`User Story`) is fine.
+- `-ParentId` adds the `Hierarchy-Reverse` link in the same call (a work item can have only one parent).
+- Area and iteration: pass `'System.AreaPath' = $Proj` / `'System.IterationPath' = "$Proj\Sprint 12"` in `-Fields` (omitted means the project default).
 - Assign: `System.AssignedTo` value = display name or unique name (e.g. `DOMAIN\user`). Copy the exact format from an existing work item's `AssignedTo.uniqueName`.
 - Description and repro steps are HTML. Plain text with newlines collapses; use `<br>` or `<p>`.
 - Tags: `"tag1; tag2"`.
 - Creating work items "in the past" or with another creator (`bypassRules=true`) needs special permission. Do not use it.
+- Raw form (only if the function does not fit): POST to `$Proj/_apis/wit/workitems/` plus the type after a `$` (in double quotes write a backtick before the `$`), with `-ContentType "application/json-patch+json"`, and `?validateOnly=true` first.
 
 ## 6. Updating work items
+Use `Set-TfsItem` (ONE item per call). Dry run by default: it reads the item, validates with `validateOnly=true` and shows old and new values; `-Commit` writes, re-reads and reports what is stored (`Match` per field).
 ```powershell
-$ops = @(
-  @{ op="test";    path="/rev"; value=7 },                                   # optional optimistic lock
-  @{ op="add";     path="/fields/System.State"; value="Active" },
-  @{ op="add";     path="/fields/System.AssignedTo"; value="Name" },
-  @{ op="replace"; path="/fields/System.Title"; value="New title" },
-  @{ op="remove";  path="/fields/Microsoft.VSTS.Common.Priority" }
-)
-Invoke-Tfs "_apis/wit/workitems/1234?validateOnly=true" -Method PATCH -Body $ops -ContentType "application/json-patch+json"
-Invoke-Tfs "_apis/wit/workitems/1234" -Method PATCH -Body $ops -ContentType "application/json-patch+json"
+Set-TfsItem -Id 1234 -Fields @{ 'System.State' = 'Active'; 'System.Title' = 'New title' }              # dry run
+Set-TfsItem -Id 1234 -Fields @{ 'System.State' = 'Active' } -ExpectedRev 7 -Commit                      # optimistic lock, real write
+Set-TfsItem -Id 1234 -Fields @{ 'Microsoft.VSTS.Common.Priority' = $null }                              # $null removes the field
+Set-TfsItem -Id 1234 -AddTag 'reviewed', 'urgent' -Commit                                               # merges into existing tags
 ```
-- `add` works as set (adds or overwrites a field).
-- `System.Tags` REPLACES the whole string. To append: read the current tags first, then write `"old; new"`.
+- `System.Tags` inside `-Fields` REPLACES the whole string (the output note says so). Use `-AddTag` to add tags.
 - State changes must follow the workflow. If the state is rejected, read `transitions` or move through intermediate states.
 - Bulk update: run the dry run on ONE item first, show the user the list of IDs and the change, wait for approval, then loop with a short pause. Report successes and failures per ID.
+- Raw form (only if the function does not fit): PATCH `_apis/wit/workitems/1234` with ops `add`/`replace`/`remove`/`test` and `-ContentType "application/json-patch+json"`.
 
 ## 7. Links
 Add:
@@ -222,9 +219,9 @@ Invoke-Tfs "$Proj/_apis/wit/wiql/<queryId>"                           # run a sa
 1. Read the whole specification. Identify goals, features, requirements, acceptance criteria.
 2. Discover types, required fields, area and iteration (section 2). Use only types that exist.
 3. Propose the hierarchy as a numbered tree: type, title, short description, estimate, priority. Show it to the user. Wait for approval and corrections.
-4. Dry run (`validateOnly=true`) the first item of each type.
-5. Create top-down: parents first. Save each returned `id` in a table (`$map`).
-6. Create children with a `Hierarchy-Reverse` link to the parent id from `$map`.
+4. Dry run `New-TfsItem` (no `-Commit`) for the first item of each type.
+5. Create top-down with `New-TfsItem ... -Commit`: parents first. Save each returned `Id` in a table (`$map`).
+6. Create children with `New-TfsItem ... -ParentId <parent id from $map> -Commit`.
 7. Verify: WIQL for the new items or `$expand=relations` on the top item. Print a summary table: ID, type, title, parent.
 8. If something fails midway, stop, report which items were created, and ask before retrying. Never create duplicates.
 Writing guidance: titles short and action-like; description states the goal and scope; acceptance criteria as a bulleted list in `Microsoft.VSTS.Common.AcceptanceCriteria` (User Story / PBI); one task = a unit of work of at most about one day.
@@ -233,7 +230,7 @@ Writing guidance: titles short and action-like; description states the goal and 
 - 400 on create: a required field is missing, or the state/area/iteration value does not exist. Use `validateOnly=true` and read the error message.
 - AssignedTo rejected: the identity string format is wrong. Copy the format from an existing item.
 - `$Task` in double quotes without a backtick gets expanded to empty. Use `` `$Task ``.
-- ConvertTo-Json depth: use `-Depth 20` (the helper does).
+- ConvertTo-Json depth: use `-Depth 20` (`Invoke-Tfs` does).
 - A one-element `$ops` must stay an array: write `@( ... )`, and pass it via `ConvertTo-Json -InputObject`.
 - `$var?` pitfall: any URL string like `"...$id?..."` must be written `"...${id}?..."`.
 - WIQL results ordering is by the ORDER BY only. IDs from the batch call may come back in a different order; sort by `System.Id` or by your own list.

@@ -13,9 +13,9 @@ Ask the user before running the version probe: it sends many requests in a short
 
 ## 1. Connectivity and authentication
 ```powershell
-try { Invoke-Tfs "_apis/projects?`$top=1" | Out-Null; "OK: reachable and authenticated" }
-catch { "FAIL: see troubleshooting.md" }
+Test-TfsSetup
 ```
+- Prints Area, Result (PASS/FAIL/SKIP) and Code only (config, connectivity, auth, project, WIQL, repos, builds, deployments). On FAIL see troubleshooting.md.
 
 ## 2. Server API version probe
 ```powershell
@@ -31,9 +31,9 @@ foreach ($v in "4.1","5.0","5.1","6.0","6.1","7.0") {
 ```powershell
 $vers = "4.1","5.0","5.0-preview.1","5.1","5.1-preview.1","6.0","6.0-preview.1","7.0"
 $areas = [ordered]@{
-  "Projects"="_apis/projects"; "Repos"="<PROJECT>/_apis/git/repositories"; "WorkItemTypes"="<PROJECT>/_apis/wit/workitemtypes"
-  "Builds"='<PROJECT>/_apis/build/builds?$top=1'; "ReleaseDefs"="<PROJECT>/_apis/release/definitions"; "Releases"='<PROJECT>/_apis/release/releases?$top=1'
-  "AgentPools"="_apis/distributedtask/pools"; "TestPlans"="<PROJECT>/_apis/test/plans"; "VariableGroups"="<PROJECT>/_apis/distributedtask/variablegroups"
+  "Projects"="_apis/projects"; "Repos"="$Proj/_apis/git/repositories"; "WorkItemTypes"="$Proj/_apis/wit/workitemtypes"
+  "Builds"="$Proj/_apis/build/builds?`$top=1"; "ReleaseDefs"="$Proj/_apis/release/definitions"; "Releases"="$Proj/_apis/release/releases?`$top=1"
+  "AgentPools"="_apis/distributedtask/pools"; "TestPlans"="$Proj/_apis/test/plans"; "VariableGroups"="$Proj/_apis/distributedtask/variablegroups"
   "Feeds"="_apis/packaging/feeds"
 }
 foreach ($a in $areas.GetEnumerator()) {
@@ -61,14 +61,14 @@ catch { "Create work item: not allowed or invalid (see error code)" }
 
 ## 5. Process template probe
 ```powershell
-(Invoke-Tfs "$Proj/_apis/wit/workitemtypes").value | Select-Object -ExpandProperty name   # needs the helper: on PS 5.1 the raw call returns a string
+(Invoke-Tfs "$Proj/_apis/wit/workitemtypes").value | Select-Object -ExpandProperty name   # needs Invoke-Tfs: on PS 5.1 the raw call returns a string
 ```
 - This server uses a customized process template (names did not match Agile, Scrum, CMMI or Basic in the earlier guess, which also failed because of the string issue). Read the real names first.
 - Names tell the template: `User Story` = Agile, `Product Backlog Item` = Scrum, `Requirement` = CMMI, `Issue` only = Basic. Extra names = customization.
 - Then read states for the types in use (boards.md section 2).
 
 ## 6. Known about this server (verified by a full read test, 2026-11-15)
-- Azure DevOps Server 2020 (max API 6.0). Collection `<COLLECTION>`, project `<PROJECT>`. Windows PowerShell 5.1.
+- Azure DevOps Server 2020 (max API 6.0). Collection and project are set in `scripts/tfs-config.psd1`. Windows PowerShell 5.1.
 - Windows integrated authentication works. 528 read probes: 415 OK, 0 permission denials, 24 not available, 22 failures (all explained by wrong version, wrong path, team setup, or script bugs).
 - The exact working version of each endpoint is in `references/verified.md`.
 - Write permissions have NOT been verified. Treat every write as untested until it succeeds once with the user's approval.

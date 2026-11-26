@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Always read the error message first: the helper prints `HTTP <code> <method> <path> :: <message>`.
+Always read the error message first: `Invoke-Tfs` throws `HTTP <code> <method> <path> :: <message>` (code 0 = network).
 
 ## Contents
 1. Decision table by HTTP status
@@ -26,13 +26,21 @@ Always read the error message first: the helper prints `HTTP <code> <method> <pa
 ## 2. Symptom table
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| Hebrew shows as `????` | body not sent as UTF-8 | use the helper (UTF-8 bytes) |
+| Hebrew shows as `????` | body not sent as UTF-8 | use `Invoke-Tfs` (UTF-8 bytes) |
 | Array became an object in the body | `$x \| ConvertTo-Json` unrolled it | `ConvertTo-Json -InputObject $x` |
-| `$top` missing from the URL | PowerShell expanded `$top` | write `` `$top `` or single quotes |
+| `$top` missing from the URL | PowerShell expanded `$top` inside double quotes (bash does the same to an unquoted heredoc) | write `` `$top `` or single quotes; from Git Bash use the quoted heredoc `<<'PS'` (SKILL.md section 2) |
+| HTTP 400 on `workitemsbatch`; the sent `ids` look like `[[1,2]]` | the id list was nested (`,@(...)` or an array inside an array) | send `@{ ids = @($ids); fields = @(...) }` with a flat int array, or use `Get-TfsMyItems` / `Get-TfsTree` |
+| Hebrew shows as `????` or garbage in the output, or a script fails to parse Hebrew | console output encoding is not UTF-8, or a .ps1 without BOM was read as ANSI | importing the module sets UTF-8 output; use `[Console]::OutputEncoding = [Text.Encoding]::UTF8`, not `chcp`; do not write .ps1 files (SKILL.md rule 10) |
+| `powershell -File "$HOME/..."` ends with exit 127 or file not found | Git Bash `$HOME` is not the Windows profile (other drive), and `-File` needs a temp file | run with `-EncodedCommand` and a quoted heredoc (SKILL.md section 2); use `$env:USERPROFILE` inside the PowerShell code |
+| Error `... :: PARSE` (status 200), or a section shows `error: PARSE` | the server answered with something that is not JSON (HTML login or error page, redirect target) | check authentication and `CollectionUrl` (`Test-TfsSetup`); for a legitimately non-JSON answer (log text, file content) add `-Raw` |
+| Error `... :: REDIRECT not followed` | the server redirected (often to a login page); redirects are never followed so credentials cannot leave | check `CollectionUrl` (http versus https, collection path); report it, do not bypass |
+| Error `... :: TOOBIG` | the answer is larger than 5,000,000 characters | narrow the request (`$top`, filters, line ranges) |
+| Output arrives as XML starting with `#< CLIXML` | PowerShell wrote its stderr or progress as CLIXML | add `-OutputFormat Text` to the `powershell.exe -EncodedCommand` call (SKILL.md section 2) |
+| WIQL link query returns 400 or no relations | not `FROM WorkItemLinks ... MODE (Recursive)`, or the id is a string like `'Proj\123'` instead of an integer | use `Get-TfsTree -Id N`, or fix the query (boards.md section 3) |
 | 404 on a URL that contains a variable followed by `?` | `"$id?x=1"` reads `$id?` as one variable name | write `"${id}?x=1"` |
-| Result is one very long string, `.value` is empty | PowerShell 5.1 did not parse the JSON | use the `Invoke-Tfs` helper from SKILL.md |
+| Result is one very long string, `.value` is empty | PowerShell 5.1 did not parse the JSON | use `Invoke-Tfs` from the Tfs module (SKILL.md section 2) |
 | Nested properties missing in the sent JSON | depth too low | `-Depth 20` |
-| Response is HTML, not JSON | login/redirect or wrong URL | check collection path `/tfs/<COLLECTION>` and `_apis` |
+| Response is HTML, not JSON | login/redirect or wrong URL | check `CollectionUrl` in `scripts/tfs-config.psd1` and the `_apis` path (run `Test-TfsSetup`) |
 | `The term 'az' is not recognized` | Azure CLI not installed | by design. Use REST |
 | Same call works for one project, not another | permissions per project | report; do not bypass |
 | List is shorter than expected | default page size | set `$top`, use paging (powershell-notes.md section 5) |
@@ -40,7 +48,9 @@ Always read the error message first: the helper prints `HTTP <code> <method> <pa
 | Works in browser, fails in PowerShell | certificate, proxy or auth | test with `Invoke-WebRequest -UseDefaultCredentials`; report TLS errors |
 | Timeouts | big queries (`recursionLevel=Full`, huge WIQL) | narrow the query |
 | `ConvertFrom-Json` fails on large content | 2 MB limit on 5.1 | see powershell-notes.md section 1 |
-| Variable not found (`$Base`, `$Proj`) | helper not defined in this session | define the helper (SKILL.md section 2) |
+| `Invoke-Tfs` / `Get-Tfs...` not recognized, or `$Base`/`$Proj` empty | module not imported in this PowerShell process | start the command block with the `Import-Module` line (SKILL.md section 2) |
+| `Import-Module` blocked (execution policy, files from a download) | the policy blocks the copied `.psm1` | report it to the user and suggest `Unblock-File` on the files in `scripts\`; NEVER change the execution policy yourself |
+| Warning `Config: placeholder <...> not replaced`, or every function throws `Config: ...` | `scripts/tfs-config.psd1` still has placeholders or an invalid value | run `Test-TfsSetup`; tell the user which key (the message names it); do not guess values |
 
 ## 3. Per-area problems
 Boards:

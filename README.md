@@ -14,12 +14,14 @@ user/
   CLAUDE.md      -> ~/.claude/CLAUDE.md      (הנחיות שחלות על כל הפרויקטים)
   settings.json  -> ~/.claude/settings.json  (הרשאות ומשתני סביבה)
   skills/        -> ~/.claude/skills/        (סקילים)
+tests/           (בדיקות Pester ו-PSScriptAnalyzer לפיתוח בלבד; לא מועתקות למחשב העבודה)
+spec.md          (דרישות הפרויקט והסקילים)
 ```
 
 ## סקילים
 | סקיל | מה עושה |
 |---|---|
-| `tfs-access` | עבודה מול שרת ה-TFS (Azure DevOps Server) הפנימי דרך REST מ-PowerShell |
+| `tfs-access` | עבודה מול שרת ה-TFS (Azure DevOps Server) הפנימי דרך REST מ-PowerShell. מודול `scripts/Tfs.psm1` עם פונקציות מוכנות (פריטים שלי, PR, בילדים, deployments, סיכום יומי ועוד) והגדרות ב-`scripts/tfs-config.psd1` |
 | `project-map` | יצירת `PROJECT_MAP.md` – מפה קצרה של הפרויקט לסוכן |
 | `microservices-logging-placement` | איפה, באיזו רמה ומה לרשום בלוגים במיקרו-שירותים |
 | `outlook-access` | שליחה, קריאה וחיפוש מיילים דרך Outlook הקלאסי (COM) מ-PowerShell. הסקריפטים מצורפים ב-`scripts/` |
@@ -31,11 +33,21 @@ user/
 
 | Placeholder | מה לשים | איפה |
 |---|---|---|
-| `<TFS_HOST>` | שם השרת של ה-TFS | `tfs-access` (כל הקבצים) |
-| `<COLLECTION>` | שם ה-collection (בדרך כלל `DefaultCollection`) | `tfs-access` |
-| `<PROJECT>` | שם הפרויקט ב-TFS | `tfs-access` |
-| `<N>` | גודל השרת (מספר repos / branches / definitions) – אופציונלי | `tfs-access/SKILL.md`, `references/git-and-prs.md` |
+| `<TFS_HOST>` | שם השרת של ה-TFS | רק `tfs-access/scripts/tfs-config.psd1` |
+| `<COLLECTION>` | שם ה-collection (בדרך כלל `DefaultCollection`) | רק `tfs-access/scripts/tfs-config.psd1` |
+| `<PROJECT>` | שם הפרויקט ב-TFS | רק `tfs-access/scripts/tfs-config.psd1` |
+| `<N>` | גודל השרת (מספר repos / branches / definitions) – אופציונלי | `tfs-access/SKILL.md`, `tfs-access/references/git-and-prs.md` |
 | `<WORK_EMAIL>` | כתובת המייל בעבודה (נמען ברירת מחדל) | `outlook-access/SKILL.md`, `outlook-access/scripts/send-mail.ps1` |
+
+### הפעלה ראשונה של tfs-access
+1. ב-`tfs-access\scripts\tfs-config.psd1` להחליף את שלוש ה-placeholders. אם שם הפרויקט בעברית, לשמור את הקובץ כ-UTF-8 **with BOM** (אחרת PowerShell 5.1 יקרא אותו שגוי).
+2. להריץ ב-PowerShell:
+```powershell
+Import-Module "$env:USERPROFILE\.claude\skills\tfs-access\scripts\Tfs.psm1" -Force
+Test-TfsSetup
+```
+הפלט קצר בכוונה: שלוש עמודות בלבד – Area, Result (PASS/FAIL/SKIP), Code – בלי שמות שרת, פרויקט או משתמש. אי אפשר להעתיק החוצה מהמחשב, לכן קוראים את הטבלה במחשב העבודה ומעבירים אליי במילים (למשל "Auth נכשל עם 401").
+3. אם Windows חוסם את הקבצים שהועתקו (מסומנים כ"הורדו מהאינטרנט") או שהרצת `Import-Module` נחסמת – להריץ `Unblock-File "$env:USERPROFILE\.claude\skills\tfs-access\scripts\*"`. לא משנים את ה-execution policy.
 
 ## התקנה במחשב העבודה
 **Windows (PowerShell):**

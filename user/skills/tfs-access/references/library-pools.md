@@ -1,6 +1,6 @@
 # Library (variable groups, task groups, service endpoints, secure files) and agent pools
 
-Prerequisite: `Invoke-Tfs`, `$Base`, `$Proj` from SKILL.md.
+Prerequisite: import the module (SKILL.md section 2).
 SECURITY FIRST: this area holds secrets. Rules:
 - List NAMES, IDs and TYPES only.
 - Never print variable values marked secret, endpoint authorization data, passwords, tokens or certificates.

@@ -1,6 +1,6 @@
 # Test plans, feeds/packages, wiki
 
-Prerequisite: `Invoke-Tfs`, `$Base`, `$Proj` from SKILL.md.
+Prerequisite: import the module (SKILL.md section 2).
 
 ## Contents
 1. Test plans (version `5.0`)
@@ -44,8 +44,8 @@ Filters: `protocolType=Npm|NuGet|Maven|PyPI`, `packageNameQuery=<text>`, `includ
 - Feeds hold internal packages. This server has no external internet, so this is where npm/NuGet packages come from.
 
 ## 4. npm / NuGet usage of feeds
-- npm registry URL pattern: `https://<TFS_HOST>/tfs/<COLLECTION>/_packaging/<feedName>/npm/registry/`
-- NuGet v3 URL pattern: `https://<TFS_HOST>/tfs/<COLLECTION>/_packaging/<feedName>/nuget/v3/index.json`
+- npm registry URL pattern: `$Base/_packaging/<feedName>/npm/registry/`
+- NuGet v3 URL pattern: `$Base/_packaging/<feedName>/nuget/v3/index.json`
 - These are patterns. Confirm the exact URL in the TFS UI (Artifacts > Connect to feed) or the project's existing `.npmrc` before relying on them.
 - Do not print `.npmrc` content: it can contain tokens. Show only the registry lines, never `_authToken`, `_auth` or `_password`.
 
@@ -56,7 +56,7 @@ Invoke-Tfs "$Proj/_apis/wiki/wikis/<wikiId>/pages?path=/&recursionLevel=OneLevel
 Invoke-Tfs "$Proj/_apis/wiki/wikis/<wikiId>/pages?path=/PageName&includeContent=true"
 ```
 - Page content is markdown in `.content`.
-- Creating/updating a page is a PUT with `@{ content = "..." }` and an `If-Match` ETag header for updates. Not supported by the helper (no custom headers). Ask the user before attempting, and use `Invoke-RestMethod` directly.
+- Creating/updating a page is a PUT with `@{ content = "..." }` and an `If-Match` ETag header for updates. Not supported by `Invoke-Tfs` (no custom headers). Ask the user before attempting, and use `Invoke-RestMethod` directly.
 
 ## 6. Pitfalls
 - Test APIs: version `5.0` only; `6.0` returns 404 or 400.

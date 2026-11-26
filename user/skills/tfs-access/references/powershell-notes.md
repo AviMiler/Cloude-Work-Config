@@ -13,13 +13,13 @@
 ## 1. PowerShell version differences
 - Windows PowerShell 5.1 (`powershell.exe`) and PowerShell 7 (`pwsh`) both work. Check with `$PSVersionTable.PSVersion`.
 - 5.1: `Invoke-WebRequest` may need `-UseBasicParsing`. TLS 1.2: if there are TLS errors run `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12`.
-- 5.1 `Invoke-RestMethod` sometimes returns the raw JSON as one long STRING instead of an object. Seen on this server with `workitemtypes` (about 700 KB) and `distributedtask/tasks` (about 1.4 MB). The `Invoke-Tfs` helper in SKILL.md handles it (retry with `JavaScriptSerializer`). If you must use `Invoke-RestMethod` directly and the result is a string, parse it the same way.
+- 5.1 `Invoke-RestMethod` sometimes returns the raw JSON as one long STRING instead of an object. Seen on this server with `workitemtypes` (about 700 KB) and `distributedtask/tasks` (about 1.4 MB). The `Invoke-Tfs` function in the Tfs module (SKILL.md section 2) handles it (retry with `JavaScriptSerializer`). If you must use `Invoke-RestMethod` directly and the result is a string, parse it the same way.
 - 5.1 `Invoke-RestMethod` sometimes cannot parse JSON larger than 2 MB. Use `Invoke-WebRequest` and `ConvertFrom-Json` with `[System.Web.Script.Serialization.JavaScriptSerializer]` and `MaxJsonLength` if that happens.
 - The `?.` and `??` operators exist only in PowerShell 7.
 
 ## 2. Escaping and quoting
 - In double-quoted strings, `$name` is expanded. Escape a literal dollar with a backtick: `` `$top ``, `` `$Task ``, `` `$expand ``.
-- In single-quoted strings nothing is expanded: `'<PROJECT>/_apis/build/builds?$top=1'`.
+- In single-quoted strings nothing is expanded: `'Proj/_apis/build/builds?$top=1'` (in the module, use `$Proj`: `"$Proj/_apis/build/builds?`$top=1"`).
 - Embedded variables with a method call need `$( )`: `"$($obj.name)"`.
 - `${sep}api-version` stops PowerShell from reading `$sepapi...` as one name.
 - `?` is a legal character in variable names. `"$id?x=1"` is read as the variable `$id?` (empty), so the URL loses the id and the call returns 404. ALWAYS write `"${id}?x=1"` (same for `$Proj`, `$repo`, `$p`, `$bb`). This was the cause of 404 on `$expand` calls on this server.
@@ -31,7 +31,7 @@
 ## 3. JSON
 - Always `ConvertTo-Json -InputObject $x -Depth 20` (default depth 2 truncates nested objects).
 - `$x | ConvertTo-Json` unrolls arrays: a one-element array becomes an object. Use `-InputObject`.
-- Send JSON as UTF-8 bytes (`[Text.Encoding]::UTF8.GetBytes($json)`) so Hebrew is preserved. The helper does this.
+- Send JSON as UTF-8 bytes (`[Text.Encoding]::UTF8.GetBytes($json)`) so Hebrew is preserved. `Invoke-Tfs` does this.
 - Work item create/update needs `Content-Type: application/json-patch+json`. All other writes use `application/json`.
 - Building the body as a hashtable is safer than hand-written JSON strings.
 - Booleans: `$true` / `$false` in hashtables, not the strings "true"/"false".
@@ -46,7 +46,7 @@ try { Invoke-Tfs "..." } catch {
 }
 ```
 - `$detail` explains what is wrong (missing field, bad version, rule violation). Read it before retrying.
-- The helper already prints `HTTP <code> <method> <path> :: <message>`.
+- `Invoke-Tfs` already throws `HTTP <code> <method> <path> :: <message>` (code 0 = network); the code is also in `$_.Exception.Data['StatusCode']`.
 
 ## 5. Paging and continuation tokens
 - Many list APIs return one page. Signs: a `continuationToken` in the response, or the response header `x-ms-continuationtoken`.
@@ -64,7 +64,7 @@ do {
 - Set a sane ceiling (for example 500 items) and tell the user if you stopped at it.
 
 ## 6. Headers, raw text, binary downloads
-- Custom headers (ETag `If-Match`, `Accept`) are not supported by the `Invoke-Tfs` helper. Use `Invoke-RestMethod -Headers @{ "If-Match" = $etag } -UseDefaultCredentials ...` directly.
+- Custom headers (ETag `If-Match`, `Accept`) are not supported by `Invoke-Tfs`. Use `Invoke-RestMethod -Headers @{ "If-Match" = $etag } -UseDefaultCredentials ...` directly.
 - Text endpoints (build logs, file content) return a string. Show only the tail with: `($text -split "`n") | Select-Object -Last 40`.
 - Download a file: `Invoke-WebRequest -Uri $u -UseDefaultCredentials -UseBasicParsing -OutFile "C:\temp\x.zip"`.
 - Never write downloads into the repository folder or any shared location. Use a temp folder the user approved.
