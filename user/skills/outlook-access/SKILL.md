@@ -19,6 +19,15 @@ Works through the classic Outlook installed on this machine, using the user's si
 - Mail text (subject and body) is written in Hebrew unless the user asks otherwise
 - Keep Hebrew as real Hebrew characters. Never convert to Unicode escapes
 
+## Hebrew content
+
+1. Mails are mostly Hebrew. Summarise to the user in Hebrew, briefly (the user retypes results)
+2. Reversed or odd letter order in the console is a display limit (no bidi), not data corruption. Never reverse or "fix" strings. Real corruption is literal `?` characters or mojibake such as ×©
+3. When comparing text returned by the script (for example when checking a sender or subject in the output), strip bidi marks (U+200E, U+200F, U+202A-U+202E, U+2066-U+2069) and niqqud/cantillation (U+0591-U+05C7) first. Geresh/gershayim (U+05F3, U+05F4) differ from ASCII ' and ": search the part of the word before it, or try both
+4. Report only the newest message of a reply chain (skip quoted history, signatures and disclaimers) unless the user asks for the whole thread
+5. The script's Date line is month/day/year (PowerShell invariant format), so 03/04/2026 is March 4. Convert it when telling the user, and never read it as day/month
+6. Keep real Hebrew characters in -Subject, -Body and -Keywords (see Defaults)
+
 ## Requirements
 
 - Classic Outlook (process name OUTLOOK) is installed and open. New Outlook (olk) does not support COM
@@ -28,7 +37,7 @@ Works through the classic Outlook installed on this machine, using the user's si
 
 1. Do not run free-form PowerShell against Outlook. Use only the two scripts below
 2. If a script fails, report the exact error message and stop. Do not retry in a loop
-3. Pass subject, body and keywords directly as command parameters. Do not create temporary files. If Hebrew shows as ???, report the exact problem and stop
+3. Pass subject, body and keywords directly as command parameters. Do not create temporary files. If Hebrew shows as literal `?` characters or mojibake (not merely reversed order), report the exact problem and stop (see "Hebrew content")
 4. Do not create files. Run the two ready-made scripts in `scripts/` (next to this SKILL.md) directly. Never write, rewrite or recreate them, and never write a temporary .ps1/.txt to run a command
 5. `<SCRIPTS_DIR>` below = the `scripts` folder next to this SKILL.md, normally `C:\Users\<user>\.claude\skills\outlook-access\scripts`. Use the full absolute path in the command
 
@@ -165,7 +174,7 @@ Outlook security prompt appears
   Cause: Organization policy or antivirus blocks programmatic access.
   Action: Ask the user to approve it or contact IT. Do not try to bypass.
 
-Hebrew shows as ???
+Hebrew shows as literal ? characters or mojibake (reversed order alone is only a display limit, see "Hebrew content")
   Cause: Encoding is lost between the shell and PowerShell, or the scripts are not UTF-8 with BOM.
   Action: Report the problem and stop. Do not rewrite the scripts; the user re-copies them from the config repo (they ship as UTF-8 with BOM).
 

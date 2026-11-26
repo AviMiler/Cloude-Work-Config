@@ -2,6 +2,14 @@
 
 Short records of design decisions that are not obvious from the code. Newest first.
 
+## 2026-11-26: Hebrew content rules: inline in both skills, not a shared skill
+
+**Decision:** tfs-access and outlook-access each get their own short "Hebrew content" section in SKILL.md. The shared rules (display is not corruption, strip bidi marks and niqqud, geresh/gershayim, Hebrew answers) are written in both. The tfs section has the HTML and search rules, the outlook section the reply-chain and date rules.
+
+**Alternatives considered:** one new shared skill `hebrew-content` that both SKILL.md files point to.
+
+**Why:** the work-side model is small-context and weak, and follows a pointer to another skill unreliably. Inline rules are always in the context that is already loaded. Cost accepted: 3-4 shared bullets are duplicated, so a change to one of them must be made in both skills (keep them in sync). The outlook date rule differs on purpose: `read-mail.ps1` prints month/day/year (invariant culture), not the Hebrew day/month order.
+
 ## 2026-11-26: build-check hook: Stop event, bash, CRLF-proof command
 
 **Decision:** `check-build.sh` is a bash hook on the Stop event. It parses stdin with grep/sed, runs only tools already in the project (`dotnet build --no-restore`, local `node_modules/.bin/tsc` and `eslint`), and is started by `bash -c 'bash <(sed "s/\r$//" ~/.claude/hooks/check-build.sh)'` with timeout 300.

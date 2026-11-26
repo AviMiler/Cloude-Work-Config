@@ -1,5 +1,7 @@
 # Changelog
 
+- 2026-11-26: Added "Hebrew content" rules to tfs-access and outlook-access SKILL.md (display is not corruption, bidi/niqqud, HTML fields, reply chains), since TFS and mail are in Hebrew. Deviation: read-mail.ps1 dates are month/day/year, not day/month.
+
 - 2026-11-26: Added workflow tools for a small-context agent: /plan-task and /next-step skills (PLAN.md, one step per run), project CLAUDE.md template, and a Stop hook that builds/lints changed .NET/React files (CRLF-proof command). Hook unverified on Windows Git Bash.
 
 - 2026-11-26: Added sql-access skill (Sql.psm1, 14 exports): SELECT, schema, performance, INSERT/UPDATE/proc with rolled-back dry run; connection from appsettings.Development.json via a CLAUDE.md registration line. Real behavior unverified until the work smoke test.
