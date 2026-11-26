@@ -22,6 +22,7 @@ spec.md          (דרישות הפרויקט והסקילים)
 | סקיל | מה עושה |
 |---|---|
 | `tfs-access` | עבודה מול שרת ה-TFS (Azure DevOps Server) הפנימי דרך REST מ-PowerShell. מודול `scripts/Tfs.psm1` עם פונקציות מוכנות (פריטים שלי, PR, בילדים, deployments, סיכום יומי ועוד) והגדרות ב-`scripts/tfs-config.psd1` |
+| `sql-access` | גישה ל-SQL Server (2016) של הפרויקט דרך SqlClient עם אימות Windows מ-PowerShell: שאילתות SELECT, סכמה, אבחון ביצועים (תוכנית, שאילתות כבדות, חסימות, waits), ו-INSERT/UPDATE/פרוצדורות מאוחסנות במצב dry run (ברירת מחדל) או `-Commit` מאושר. החיבור נלקח מ-`appsettings.Development.json` של הפרויקט. מודול `scripts/Sql.psm1` |
 | `project-map` | יצירת `PROJECT_MAP.md` – מפה קצרה של הפרויקט לסוכן |
 | `microservices-logging-placement` | איפה, באיזו רמה ומה לרשום בלוגים במיקרו-שירותים |
 | `outlook-access` | שליחה, קריאה וחיפוש מיילים דרך Outlook הקלאסי (COM) מ-PowerShell. הסקריפטים מצורפים ב-`scripts/` |
@@ -48,6 +49,18 @@ Test-TfsSetup
 ```
 הפלט קצר בכוונה: שלוש עמודות בלבד – Area, Result (PASS/FAIL/SKIP), Code – בלי שמות שרת, פרויקט או משתמש. אי אפשר להעתיק החוצה מהמחשב, לכן קוראים את הטבלה במחשב העבודה ומעבירים אליי במילים (למשל "Auth נכשל עם 401").
 3. אם Windows חוסם את הקבצים שהועתקו (מסומנים כ"הורדו מהאינטרנט") או שהרצת `Import-Module` נחסמת – להריץ `Unblock-File "$env:USERPROFILE\.claude\skills\tfs-access\scripts\*"`. לא משנים את ה-execution policy.
+
+### הפעלה ראשונה של sql-access
+אין קובץ הגדרות ואין פרטי שרת ב-repo: החיבור נקרא מ-`appsettings.Development.json` של הפרויקט (מקטע `ConnectionStrings`), והאימות הוא Windows בלבד. כדי שהסוכן לא יחפש בכל פעם, אפשר להוסיף **שורה אחת** ל-`CLAUDE.md` שבשורש הפרויקט (בלי סודות ובלי שמות שרת או מסד נתונים):
+```
+sql-access: appsettings=<נתיב יחסי משורש הפרויקט> name=<שם ב-ConnectionStrings>
+```
+לדוגמה `sql-access: appsettings=src/Api/appsettings.Development.json name=Main`. נתיב עם רווחים נכתב במרכאות כפולות: `sql-access: appsettings="src/My Api/appsettings.Development.json" name=Main`. הנתיב חייב להיות יחסי (בלי אות כונן ובלי `..`), והשם מורכב מאותיות, ספרות, `_`, `-` ו-`.` בלבד. בלי שורה כזו הסוכן מחפש את הקובץ בתיקייה הנוכחית ועד 3 רמות מתחתיה, ואחרי שמצא שואל אם להוסיף את השורה (רק באישור שלך). הוא כותב אותה, לא המודול.
+בדיקה ראשונה (הפלט קצר: Area, Result, Code בלבד, בלי שמות שרת או מסד):
+```powershell
+Import-Module "$env:USERPROFILE\.claude\skills\sql-access\scripts\Sql.psm1" -Force
+Test-SqlSetup -Path 'src/Api/appsettings.Development.json' -Name Main
+```
 
 ## התקנה במחשב העבודה
 **Windows (PowerShell):**

@@ -2,6 +2,14 @@
 
 Short records of design decisions that are not obvious from the code. Newest first.
 
+## 2026-11-26: sql-access dry run: OUTPUT injection and T-SQL text transactions
+
+**Decision:** the write dry run captures old/new values by injecting an `OUTPUT` clause into the INSERT/UPDATE, inside a transaction that is always rolled back. Count-only fallback on errors such as 334 or 4186. `BEGIN TRAN` / `ROLLBACK` are sent as T-SQL text batches, not `SqlTransaction`. Stored procedures are a separate `Invoke-SqlProc`.
+
+**Alternatives considered:** SELECT before and after by primary key (needs a PK and loses rows whose WHERE stops matching after the update); `SqlTransaction` (cannot survive a procedure that commits or rolls back internally, and is harder to order and test); EXEC inside `Invoke-SqlWrite` (needs SQL text parsing and invites dynamic SQL).
+
+**Why:** the text-batch transaction lets the module see `@@TRANCOUNT` after a procedure and report Kind TXN; OUTPUT shows exactly the rows the statement touched.
+
 ## 2026-11-26: Invoke-Tfs keeps POST/PATCH/PUT/DELETE as a raw escape hatch (tfs-access)
 
 **Question:** should the module's raw `Invoke-Tfs` refuse write methods (or require an `-AllowWrite` switch), so that only `New-TfsItem` / `Set-TfsItem` can write?
