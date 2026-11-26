@@ -14,6 +14,8 @@ user/
   CLAUDE.md      -> ~/.claude/CLAUDE.md      (הנחיות שחלות על כל הפרויקטים)
   settings.json  -> ~/.claude/settings.json  (הרשאות ומשתני סביבה)
   skills/        -> ~/.claude/skills/        (סקילים)
+  hooks/         -> ~/.claude/hooks/         (hook בדיקת build בסוף כל תור)
+  templates/     -> ~/.claude/templates/     (תבנית CLAUDE.md לפרויקט)
 tests/           (בדיקות Pester ו-PSScriptAnalyzer לפיתוח בלבד; לא מועתקות למחשב העבודה)
 spec.md          (דרישות הפרויקט והסקילים)
 ```
@@ -26,8 +28,23 @@ spec.md          (דרישות הפרויקט והסקילים)
 | `project-map` | יצירת `PROJECT_MAP.md` – מפה קצרה של הפרויקט לסוכן |
 | `microservices-logging-placement` | איפה, באיזו רמה ומה לרשום בלוגים במיקרו-שירותים |
 | `outlook-access` | שליחה, קריאה וחיפוש מיילים דרך Outlook הקלאסי (COM) מ-PowerShell. הסקריפטים מצורפים ב-`scripts/` |
+| `plan-task` | מפרק משימה ל-`PLAN.md` עם צעדים קטנים ופקודת בדיקה לכל צעד, בלי לערוך קוד. רץ רק כשמקלידים `/plan-task` |
+| `next-step` | מבצע רק את הצעד הבא ב-`PLAN.md`, מריץ את הבדיקה שלו ועוצר. רץ רק כשמקלידים `/next-step` |
 
 כל הסקילים מוגדרים **לא ליצור קבצים אם אפשר** – להריץ פקודות ישירות. סקריפטים נדרשים מגיעים מוכנים בתיקיית `scripts/` של הסקיל.
+
+### עבודה במשימות קידוד
+מיועד ל-Claude איטי עם הקשר קטן: צעדים קטנים ובדיקה מהירה אחרי כל אחד.
+1. `/plan-task <משימה>` – יוצר `PLAN.md` בשורש הפרויקט (בלי לערוך קוד).
+2. `/clear`
+3. `/next-step` – מבצע צעד אחד, בודק, מסמן `[x]` ועוצר.
+4. `/clear` ואז `/next-step` שוב, עד שאין צעדים פתוחים.
+
+**תבנית פרויקט:** להעתיק את `~/.claude/templates/project-CLAUDE.md` לשורש הפרויקט בשם `CLAUDE.md` ולמלא את ה-`<...>` (פקודות build/test, איפה הדברים, דוגמאות להעתקה).
+
+**Hook בדיקה בסוף כל תור (Stop):** `hooks/check-build.sh` בודק רק קבצים ששונו לפי `git status`. קבצי `.cs` – `dotnet build --no-restore` לפרויקט הקרוב; קבצי `ts/tsx/js/jsx` – `tsc --noEmit` ו-`eslint --quiet` מתוך `node_modules/.bin` של הפרויקט (בלי `npx`, בלי התקנות, בלי רשת). אם יש שגיאות הן מוחזרות ל-Claude (עד 30 שורות) והוא מתקן. אם חסר restore מודפסת הודעה "run dotnet restore first". הפקודה ב-`settings.json` מסירה CRLF מהסקריפט בזמן ההרצה, כך שהוא עובד גם אם הקובץ הועתק עם סיומות שורה של Windows.
+- כיבוי זמני: `CLAUDE_SKIP_CHECK=1` (משתנה סביבה).
+- דורש את בלוק `"hooks"` ב-`settings.json`. אם כבר קיים `settings.json` במחשב, למזג את הבלוק ידנית.
 
 ### פרטים למלא במחשב העבודה
 פרטים ספציפיים של הארגון הוחלפו ב-placeholders. יש להחליף אותם אחרי ההעתקה:
@@ -69,13 +86,15 @@ New-Item -ItemType Directory -Force "$env:USERPROFILE\.claude" | Out-Null
 Copy-Item user\CLAUDE.md     "$env:USERPROFILE\.claude\CLAUDE.md"
 Copy-Item user\settings.json "$env:USERPROFILE\.claude\settings.json"
 Copy-Item user\skills "$env:USERPROFILE\.claude\" -Recurse -Force
+Copy-Item user\hooks "$env:USERPROFILE\.claude\" -Recurse -Force
+Copy-Item user\templates "$env:USERPROFILE\.claude\" -Recurse -Force
 ```
 
 **Linux / macOS:**
 ```bash
 mkdir -p ~/.claude
 cp user/CLAUDE.md user/settings.json ~/.claude/
-cp -r user/skills ~/.claude/
+cp -r user/skills user/hooks user/templates ~/.claude/
 ```
 
-> אם כבר קיים `settings.json` במחשב (למשל עם הגדרות חיבור ל-API הפנימי), אל תדרוס אותו – מזג ידנית את `env` ו-`permissions`.
+> אם כבר קיים `settings.json` במחשב (למשל עם הגדרות חיבור ל-API הפנימי), אל תדרוס אותו – מזג ידנית את `env`, `permissions` ו-`hooks`.

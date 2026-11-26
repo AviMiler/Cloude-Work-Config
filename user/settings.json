@@ -42,5 +42,18 @@
       "Bash(Invoke-WebRequest:*)",
       "Bash(git clone:*)"
     ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'bash <(sed \"s/\\r$//\" ~/.claude/hooks/check-build.sh)'",
+            "timeout": 300
+          }
+        ]
+      }
+    ]
   }
 }
