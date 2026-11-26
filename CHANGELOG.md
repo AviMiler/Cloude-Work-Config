@@ -1,5 +1,7 @@
 # Changelog
 
+- 2026-11-26: tfs-access recipe 13 "my open items -> email" (one EncodedCommand block, in-process send-mail.ps1) plus an outlook-access rule for generated bodies; cuts a many-call field run to one. Docs only, unverified at work.
+
 - 2026-11-26: Added workflow tools for a small-context agent: /plan-task and /next-step skills (PLAN.md, one step per run), project CLAUDE.md template, and a Stop hook that builds/lints changed .NET/React files (CRLF-proof command). Hook unverified on Windows Git Bash.
 
 - 2026-11-26: Added sql-access skill (Sql.psm1, 14 exports): SELECT, schema, performance, INSERT/UPDATE/proc with rolled-back dry run; connection from appsettings.Development.json via a CLAUDE.md registration line. Real behavior unverified until the work smoke test.
